@@ -124,11 +124,11 @@ LWD 的 replay 样本不是单步  <img src="https://www.zhihu.com/equation?tex=
 
 这个设定很关键。长程任务持续 3-5 分钟，包含 5-8 个标注子步骤，终止奖励又很稀疏。如果只把部署中的人工干预片段当作模仿学习标签，模型只能学到“人此时怎么纠正”，却不能系统利用失败轨迹告诉它“哪些动作路径没有通向成功”。LWD 作者认为，部署数据里最有价值的部分包括失败、部分恢复、成功前的长路径和偶发人工干预，这些都需要 RL 目标来吸收。
 
-![图1：LWD 把 fleet deployment、autonomous rollouts、online buffer 和 scalable post-training 连成闭环](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/fig1_lwd_flywheel_1.png)
+![图1：LWD 把 fleet deployment、autonomous rollouts、online buffer 和 scalable post-training 连成闭环](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/fig1_lwd_flywheel.png)
 
 LWD 的训练流程分成两段。第一段是 offline RL pre-training，用已有离线 buffer 初始化 policy、critic 和 distributional value model。第二段是 continuous online post-training，把当前 policy 部署到机器人 fleet 上，收集 autonomous rollouts 和可选人工干预，再和 offline buffer 混合训练。
 
-![图2：LWD 的两阶段训练流程，以及 DIVL 价值学习和 QAM 策略提取的算法结构](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/fig2_lwd_pipeline_algorithm_1.png)
+![图2：LWD 的两阶段训练流程，以及 DIVL 价值学习和 QAM 策略提取的算法结构](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/fig2_lwd_pipeline_algorithm.png)
 
 ---
 
@@ -531,7 +531,7 @@ w(1-w)\tilde{g}_w.
 
 这就是adjoint matching的意义：不直接把  <img src="https://www.zhihu.com/equation?tex=Q" alt="Q" class="ee_img tr_noresize" eeimg="1">  的梯度穿过完整 denoising ODE，而是把终点的价值梯度通过 adjoint 分配到 reference flow 轨迹上的每个  <img src="https://www.zhihu.com/equation?tex=w" alt="w" class="ee_img tr_noresize" eeimg="1"> ，再让  <img src="https://www.zhihu.com/equation?tex=f_\theta-f_\beta" alt="f_\theta-f_\beta" class="ee_img tr_noresize" eeimg="1">  去拟合这些局部速度场偏移。
 
-![图3：LWD learner 中 DIVL 更新价值分布和 critic，QAM 用 critic 动作梯度更新 policy](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/alg2_learner_update_1.png)
+![图3：LWD learner 中 DIVL 更新价值分布和 critic，QAM 用 critic 动作梯度更新 policy](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/alg2_learner_update.png)
 
 ---
 
@@ -539,7 +539,7 @@ w(1-w)\tilde{g}_w.
 
 LWD 的训练不是先离线再完全换一个在线目标，而是 offline stage 和 online stage 共用同一套 learner。算法 1 先用演示数据做一次预训练，再固定 reference policy  <img src="https://www.zhihu.com/equation?tex=\pi_\beta" alt="\pi_\beta" class="ee_img tr_noresize" eeimg="1"> ，初始化  <img src="https://www.zhihu.com/equation?tex=Q_\phi,V_\psi" alt="Q_\phi,V_\psi" class="ee_img tr_noresize" eeimg="1">  和 target critic  <img src="https://www.zhihu.com/equation?tex=Q_{\bar{\phi}}" alt="Q_{\bar{\phi}}" class="ee_img tr_noresize" eeimg="1"> 。offline stage 从  <img src="https://www.zhihu.com/equation?tex=B_{\mathrm{off}}" alt="B_{\mathrm{off}}" class="ee_img tr_noresize" eeimg="1">  采样训练，online stage 则让 robot actor 异步执行当前 policy，把 transition 写入  <img src="https://www.zhihu.com/equation?tex=B_{\mathrm{on}}" alt="B_{\mathrm{on}}" class="ee_img tr_noresize" eeimg="1"> ，central learner 从  <img src="https://www.zhihu.com/equation?tex=B_{\mathrm{off}}\cup B_{\mathrm{on}}" alt="B_{\mathrm{off}}\cup B_{\mathrm{on}}" class="ee_img tr_noresize" eeimg="1">  混合采样。
 
-![图4：LWD offline-to-online training pipeline，机器人 actor 和 central learner 异步闭环运行](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/alg1_training_pipeline_1.png)
+![图4：LWD offline-to-online training pipeline，机器人 actor 和 central learner 异步闭环运行](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/alg1_training_pipeline.png)
 
 长程任务的稀疏奖励传播很慢，所以 offline stage 使用 n-step chunk-level TD target：
 
@@ -568,23 +568,23 @@ V_\psi(s_{t+nH})
 
 离线数据由三类组成：expert demonstrations、historical policy rollouts 和 play data。Demonstrations 都是成功轨迹，rollouts 包含成功和失败，play data 是人工引导探索失败模式和边界情况。总量是 652.5 小时，其中 demonstration 336.6 小时，successful rollout 88.8 小时，failed rollout 39.2 小时，play data 187.9 小时。
 
-![表1：LWD 离线 buffer 的任务维度和数据来源构成，共 652.5 小时](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/table4_offline_data_composition_1.png)
+![表1：LWD 离线 buffer 的任务维度和数据来源构成，共 652.5 小时](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/table4_offline_data_composition.png)
 
-![图5：离线数据按任务和数据来源划分，长程任务占 81.2%，失败相关数据约占三分之一](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/fig7_offline_data_composition_1.png)
+![图5：离线数据按任务和数据来源划分，长程任务占 81.2%，失败相关数据约占三分之一](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/fig7_offline_data_composition.png)
 
 模型结构上，policy 和 value/critic 是分开的。 <img src="https://www.zhihu.com/equation?tex=V_\psi" alt="V_\psi" class="ee_img tr_noresize" eeimg="1">  和  <img src="https://www.zhihu.com/equation?tex=Q_\phi" alt="Q_\phi" class="ee_img tr_noresize" eeimg="1">  使用共享 Gemma3-SigLIP VLM backbone，但有不同预测头；policy actor 使用  <img src="https://www.zhihu.com/equation?tex=\pi_0.5" alt="\pi_0.5" class="ee_img tr_noresize" eeimg="1">  的 flow-based VLA 架构，包含 PaliGemma vision-language backbone 和 Gemma-300M action expert。offline RL 阶段 actor 和 value/critic 都 fully fine-tune；online QAM 更新时冻结 policy VLM backbone，只更新 action expert，而 value/critic 继续 fully fine-tune。
 
 实验平台是 Agibot G1 双臂机器人，每台有两个 7-DoF 机械臂、parallel-jaw grippers 和三个 RGB 相机。在线训练使用 16 台机器人并发采集：4 台用于 grocery restocking，四个长程任务各 3 台。每个在线实验给每种方法 4 小时 wall-clock budget，相当于整个 fleet 约 60 小时在线数据。
 
-![图6：LWD 使用 16 台真实双臂机器人并发收集在线 rollouts](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/fig4_robot_fleet_1.png)
+![图6：LWD 使用 16 台真实双臂机器人并发收集在线 rollouts](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/fig4_robot_fleet.png)
 
 系统层面，actor 会把 episode 上传到 object storage，再通过 message queue 通知 cloud side。Coordinator 提交版本化 snapshot，multi-host SPMD JAX learner 通过 DRB Reader 读取一致的数据视图，训练后再把新 policy 发布给所有 robot actors。
 
-![图7：LWD 的分布式数据基础设施，包含 actor 上传、版本化 replay snapshot 和 policy fanout](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/fig10_distributed_infrastructure_1.png)
+![图7：LWD 的分布式数据基础设施，包含 actor 上传、版本化 replay snapshot 和 policy fanout](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/fig10_distributed_infrastructure.png)
 
 论文报告的 operational latency 如下：episode produced 到 available to learner 的 P50/P99 为 41 秒/148 秒，model published 到 received by actor 的 P50/P99 为 38 秒/55 秒。作者也强调绝对值依赖网络配置和链路拥塞。
 
-![表2：LWD 分布式系统中数据进入 learner 和模型发布到 actor 的端到端延迟](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/table6_operational_latency_1.png)
+![表2：LWD 分布式系统中数据进入 learner 和模型发布到 actor 的端到端延迟](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/table6_operational_latency.png)
 
 ---
 
@@ -592,39 +592,39 @@ V_\psi(s_{t+nH})
 
 论文评测了 8 个真实任务：四个 grocery restocking 任务，以及四个长程任务 Make Cocktail、Brew Gongfu Tea、Make Fruit Juice 和 Pack Shoes。grocery restocking 采用二元成功率；长程任务采用 step-wise success score，每个标注子步骤按 1、0.5、0 评分，再对步骤平均。
 
-![图8：四个长程任务和四个 grocery restocking 任务的真实机器人场景](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/fig3_evaluation_tasks_1.png)
+![图8：四个长程任务和四个 grocery restocking 任务的真实机器人场景](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/fig3_evaluation_tasks.png)
 
 主结果非常直接。LWD Online 在平均分上达到 0.95，高于 SFT 的 0.76、RECAP 的 0.85、HG-DAgger 的 0.85 和 LWD Offline 的 0.88。更关键的是长程任务：Gongfu Tea 从 SFT 的 0.64 提升到 0.89，Fruit Juice 从 0.66 提升到 0.90，Cocktail 从 0.70 提升到 0.93，Shoebox 从 0.70 提升到 0.92。
 
-![表3：8 个真实任务上的完整结果，LWD Online 在平均分和四个长程任务上均为最优](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/table1_main_results_1.png)
+![表3：8 个真实任务上的完整结果，LWD Online 在平均分和四个长程任务上均为最优](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/table1_main_results.png)
 
-![图9：LWD 在长程任务成功分数和 cycle time 上相对 SFT 的变化](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/fig5_success_cycle_time_1.png)
+![图9：LWD 在长程任务成功分数和 cycle time 上相对 SFT 的变化](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/fig5_success_cycle_time.png)
 
 这个结果说明 LWD 的收益并不只是“更会做短任务”。grocery restocking 上多数 post-training 方法已经接近饱和，但 LWD 仍然保持接近最优；真正拉开差距的是需要多阶段执行、接触丰富操作和错误恢复的长程任务。
 
 价值函数可视化也支持这一点。在成功的 Gongfu Tea episode 中，distributional value 的分位数value 会随着关键子步骤完成而上升；失败 episode 中，value 有局部波动，但在执行不再推进后保持较低。也就是说，即使奖励只在终止成功时给出，DIVL 学到的价值仍然能在一定程度上反映任务进度。
 
-![图10：成功和失败 Gongfu Tea episode 中，distributional value分位数随时间变化的差异](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/fig6_value_learning_1.png)
+![图10：成功和失败 Gongfu Tea episode 中，distributional value分位数随时间变化的差异](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/fig6_value_learning.png)
 
 论文的第一个关键消融是 value learning design。把 DIVL 换成 scalar期望regression 后，短任务差异不大，但长程任务差距明显：offline setting 下从 0.72 到 0.79，online setting 下从 0.78 到 0.91。作者的解释是，fleet replay 中存在多种成功、失败和干预轨迹，标量价值会把这些异质结果压成平均值，而分布式价值可以保留 rare but reproducible high-return modes。
 
-![表4：DIVL 相对 scalar期望regression 的消融，主要增益集中在长程任务](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/table2_value_ablation_summary_1.png)
+![表4：DIVL 相对 scalar期望regression 的消融，主要增益集中在长程任务](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/table2_value_ablation_summary.png)
 
 附录中的完整 per-task ablation 也保持同样趋势：online DIVL 在八个任务平均 0.95，而 online期望regression 为 0.88。
 
-![表5：value learning design 的完整 per-task 消融结果](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/table5_value_ablation_complete_1.png)
+![表5：value learning design 的完整 per-task 消融结果](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/table5_value_ablation_complete.png)
 
 第二个消融是 adaptive  <img src="https://www.zhihu.com/equation?tex=\tau" alt="\tau" class="ee_img tr_noresize" eeimg="1"> 。论文把 adaptive schedule 和固定  <img src="https://www.zhihu.com/equation?tex=\tau=0.52" alt="\tau=0.52" class="ee_img tr_noresize" eeimg="1">  对比，其他组件不变。adaptive  <img src="https://www.zhihu.com/equation?tex=\tau" alt="\tau" class="ee_img tr_noresize" eeimg="1">  让 offline LWD 平均分从 0.84 提升到 0.88，尤其在 Restocking、Correction 和 Cocktail 上更明显。这个结果对应前面的公式：当价值分布熵高时降低  <img src="https://www.zhihu.com/equation?tex=\tau" alt="\tau" class="ee_img tr_noresize" eeimg="1"> ，可以让 bootstrap 更保守；当分布更集中时提高  <img src="https://www.zhihu.com/equation?tex=\tau" alt="\tau" class="ee_img tr_noresize" eeimg="1"> ，则鼓励策略选择高价值解。
 
-![表6：adaptive tau 相对固定 tau 的 offline LWD 消融结果](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/table3_adaptive_tau_ablation_1.png)
+![表6：adaptive tau 相对固定 tau 的 offline LWD 消融结果](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/table3_adaptive_tau_ablation.png)
 
 附录还给出动态  <img src="https://www.zhihu.com/equation?tex=\tau" alt="\tau" class="ee_img tr_noresize" eeimg="1">  和 normalized entropy 的训练曲线。entropy 在 offline-to-online 两个阶段都下降，说明价值估计逐渐更确定；相应地， <img src="https://www.zhihu.com/equation?tex=\tau" alt="\tau" class="ee_img tr_noresize" eeimg="1">  逐渐上升，训练目标更倾向于高价值解。
 
-![图11：offline 和 online 阶段的动态 tau 与 normalized entropy 曲线](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/fig8_dynamic_tau_entropy_1.png)
+![图11：offline 和 online 阶段的动态 tau 与 normalized entropy 曲线](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/fig8_dynamic_tau_entropy.png)
 
 预测价值分布的可视化进一步说明，成功 episode 中分布保持单峰且 mode 从约 0.4 增长到 1.0；失败 episode 中 mode 只从约 0.5 到 0.6 后停滞。这虽然无法直接证明 value function 完美，但说明它确实捕捉到了成功进展和失败停滞之间的差异。
 
-![图12：成功 episode 和失败 episode 中 predicted value distribution 的变化](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/fig9_predicted_value_distributions_1.png)
+![图12：成功 episode 和失败 episode 中 predicted value distribution 的变化](https://raw.githubusercontent.com/Flowey233/Markdown4Zhihu/master/Data/LWD解读/fig9_predicted_value_distributions.png)
 
 ---
 
