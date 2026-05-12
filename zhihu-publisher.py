@@ -52,28 +52,26 @@ def rename_image_ref(m, original=True):
     # global image_folder_path
     ori_path = m.group(2) if original else m.group(1)
     try:
-        if op.exists(ori_path):
-            full_img_path = ori_path
-            # copy the image to image_folder_path
-            # generate a unique name for the image, if there is a same name image, then add a number to the end of the name recursively until it is unique
-            img_stem = Path(full_img_path).stem
-            img_suffix = Path(full_img_path).suffix
-            img_name = img_stem+img_suffix
-            img_name_new = img_name
-            if op.exists(op.join(args.image_folder_path, img_name_new)):
-                i = 1
-                while op.exists(op.join(args.image_folder_path, img_name_new)):
-                    img_name_new = img_stem+"_"+str(i)+img_suffix
-                    i+=1
-            
-            copyfile(full_img_path, op.join(args.image_folder_path, img_name_new))
-            full_img_path = op.join(args.image_folder_path, img_name_new)
+        full_img_path = ori_path if op.isabs(ori_path) else op.join(args.file_parent, ori_path)
+        if not op.exists(full_img_path):
+            return m.group(0)
 
-        else:
-            full_img_path = op.join(args.file_parent, ori_path)
-            img_stem = Path(full_img_path).stem
-            if not op.exists(full_img_path):
-                return m.group(0)
+        # copy the image to image_folder_path
+        # generate a unique name for the image, if there is a same name image, then add a number to the end of the name recursively until it is unique
+        img_stem = Path(full_img_path).stem
+        img_suffix = Path(full_img_path).suffix
+        img_name = img_stem+img_suffix
+        img_name_new = img_name
+        if op.exists(op.join(args.image_folder_path, img_name_new)):
+            i = 1
+            while op.exists(op.join(args.image_folder_path, img_name_new)):
+                img_name_new = img_stem+"_"+str(i)+img_suffix
+                i+=1
+
+        target_img_path = op.join(args.image_folder_path, img_name_new)
+        if op.abspath(full_img_path) != op.abspath(target_img_path):
+            copyfile(full_img_path, target_img_path)
+        full_img_path = target_img_path
     except OSError:
         return m.group(0)
 
